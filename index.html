@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08110e">
+<title>جاسوس — بازی دورهمی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#08110e;
+  --bg1:#0d1a16;
+  --panel:#0f211b;
+  --panel2:#142a22;
+  --line:#24483c;
+  --line-soft:#1a362c;
+  --ink:#ecf6ee;
+  --muted:#8fb0a2;
+  --faint:#5d7d70;
+  --gold:#f2b33d;
+  --gold-soft:rgba(242,179,61,.14);
+  --red:#ef5350;
+  --red-soft:rgba(239,83,80,.13);
+  --teal:#38d9a9;
+  --teal-soft:rgba(56,217,169,.12);
+  --disp:'Lalezar','Vazirmatn',serif;
+  --body:'Vazirmatn',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--body);color:var(--ink);min-height:100dvh;overflow-x:hidden;
+  background:
+    radial-gradient(1100px 560px at 88% -12%, rgba(242,179,61,.09), transparent 62%),
+    radial-gradient(950px 640px at -12% 112%, rgba(56,217,169,.08), transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg0) 40%);
+  background-attachment:fixed;
+}
+::selection{background:var(--gold);color:#1a1205}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;touch-action:manipulation}
+input{font-family:inherit}
+
+/* ---------- پس‌زمینه ---------- */
+.bg-grid,.noise,.scan,.floaters{position:fixed;inset:0;pointer-events:none;z-index:0}
+.bg-grid{
+  background-image:
+    linear-gradient(rgba(56,217,169,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,217,169,.045) 1px, transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
+}
+.noise{opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.scan{background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);opacity:.13}
+.floaters span{position:absolute;font-family:var(--disp);line-height:1;user-select:none;animation:floaty 16s ease-in-out infinite}
+.floaters span:nth-child(1){top:12%;right:6%;font-size:5.5rem;color:rgba(242,179,61,.05);animation-delay:-2s}
+.floaters span:nth-child(2){top:56%;left:4%;font-size:7rem;color:rgba(56,217,169,.05);animation-delay:-7s}
+.floaters span:nth-child(3){top:78%;right:12%;font-size:4.5rem;color:rgba(239,83,80,.06);animation-delay:-11s}
+.floaters span:nth-child(4){top:34%;left:14%;font-size:3.5rem;color:rgba(242,179,61,.06);animation-delay:-4s;animation-duration:12s}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-26px) rotate(5deg)}}
+
+/* ---------- چیدمان ---------- */
+.app{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:14px 18px calc(36px + env(safe-area-inset-bottom));min-height:100dvh;display:flex;flex-direction:column}
+.cut{clip-path:polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%)}
+
+/* ---------- نوار بالا ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 0 14px;border-bottom:1px solid var(--line-soft);margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--disp);font-size:1.5rem;color:var(--gold);line-height:1}
+.brand svg{width:30px;height:20px;color:var(--gold)}
+.phase-pill{
+  margin-inline-start:auto;font-size:.72rem;font-weight:700;color:var(--teal);
+  background:var(--teal-soft);border:1px solid rgba(56,217,169,.3);
+  padding:.35rem .7rem;border-radius:999px;display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+}
+.phase-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);animation:blinkdot 1.6s ease-in-out infinite}
+@keyframes blinkdot{0%,100%{opacity:1}50%{opacity:.25}}
+.icon-btn{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;color:var(--muted);background:rgba(15,33,27,.6);transition:.2s}
+.icon-btn:hover{color:var(--ink);border-color:var(--faint)}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn svg{width:20px;height:20px}
+.abort-btn{height:42px;padding:0 14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:.82rem;font-weight:700;background:rgba(15,33,27,.6);transition:.2s}
+.abort-btn:hover{color:var(--red);border-color:rgba(239,83,80,.4)}
+.abort-btn:active{transform:scale(.95)}
+
+/* ---------- صفحه‌ها ---------- */
+.screen{display:none}
+.screen.active{display:block;animation:screenIn .5s cubic-bezier(.2,.8,.3,1) both}
+@keyframes screenIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* ---------- شروع ---------- */
+.brief-head{display:flex;align-items:center;gap:18px;margin:6px 0 20px}
+.radar{
+  position:relative;flex:none;width:96px;height:96px;border-radius:50%;
+  border:1px solid rgba(56,217,169,.4);
+  background:
+    radial-gradient(circle, transparent 0 28%, rgba(56,217,169,.14) 28.5% 29.5%, transparent 30% 45%, rgba(56,217,169,.14) 45.5% 46.5%, transparent 47% 62%, rgba(56,217,169,.14) 62.5% 63.5%, transparent 64%),
+    rgba(56,217,169,.05);
+  box-shadow:0 0 34px rgba(56,217,169,.14), inset 0 0 18px rgba(56,217,169,.08);
+}
+.radar::after{content:"";position:absolute;top:50%;left:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--teal)}
+.radar .sweep{position:absolute;inset:2px;border-radius:50%;background:conic-gradient(from 0deg, rgba(56,217,169,.55), rgba(56,217,169,.12) 55deg, transparent 70deg);animation:spin 3.2s linear infinite}
+.radar .blip{position:absolute;top:26%;left:60%;width:5px;height:5px;border-radius:50%;background:var(--gold);animation:blip 3.2s ease-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blip{0%,15%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.15)}70%{opacity:0;transform:scale(.4)}100%{opacity:0}}
+.stamp-tag{display:inline-block;font-family:var(--disp);font-size:.8rem;color:var(--red);border:1.5px solid var(--red);border-radius:6px;padding:.05rem .6rem;transform:rotate(-3deg);letter-spacing:.06em;margin-bottom:4px;background:var(--red-soft)}
+h1.logo{font-family:var(--disp);font-weight:400;font-size:clamp(3.1rem,15vw,4.6rem);line-height:1;text-shadow:0 0 40px rgba(242,179,61,.18)}
+h1.logo em{font-style:normal;color:var(--gold)}
+.tag{color:var(--muted);font-size:.92rem;margin-top:6px;font-weight:300}
+
+/* عکس پرونده */
+.evidence{
+  position:relative;margin:2px 2px 24px;padding:8px 8px 0;transform:rotate(-1.4deg);
+  border:1px solid var(--line);background:#0c1a15;box-shadow:0 26px 54px rgba(0,0,0,.5);
+  transition:transform .4s;
+}
+.evidence:hover{transform:rotate(0deg) translateY(-3px)}
+.evidence .ph{height:152px;overflow:hidden;position:relative}
+.evidence img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.5) contrast(1.08) brightness(.82);animation:kenburns 18s ease-in-out infinite alternate}
+.evidence .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(8,17,14,.15), rgba(8,17,14,.55));pointer-events:none}
+@keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.13) translateX(-2.5%)}}
+.evidence figcaption{display:flex;align-items:center;gap:8px;padding:9px 4px;color:var(--faint);font-size:.72rem;font-weight:700;letter-spacing:.05em}
+.evidence figcaption svg{width:16px;height:16px;color:var(--gold);flex:none}
+.tape{position:absolute;width:76px;height:22px;top:-11px;background:linear-gradient(180deg, rgba(242,179,61,.32), rgba(242,179,61,.18));box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.tape.t1{right:22px;transform:rotate(5deg)}
+.tape.t2{left:22px;transform:rotate(-7deg)}
+
+.panel{
+  background:linear-gradient(180deg, var(--panel2), var(--panel));
+  border:1px solid var(--line);padding:20px 18px;margin-bottom:16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 18px 40px rgba(0,0,0,.35);
+}
+.panel-title{font-family:var(--disp);font-weight:400;font-size:1.35rem;color:var(--gold);display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.panel-title::after{content:"";flex:1;height:1px;background:linear-gradient(to left, var(--line), transparent)}
+
+.setting{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 2px;border-bottom:1px dashed var(--line-soft)}
+.setting:last-of-type{border-bottom:none}
+.setting-label{display:block;font-weight:700;font-size:1rem}
+.setting-sub{display:block;color:var(--faint);font-size:.75rem;margin-top:2px}
+.stepper{display:flex;align-items:center;gap:12px;flex:none}
+.step-btn{
+  width:54px;height:54px;border-radius:50%;border:1.5px solid var(--line);
+  background:var(--bg1);color:var(--gold);font-size:1.7rem;font-family:var(--disp);line-height:1;
+  display:grid;place-items:center;transition:.18s;padding-bottom:5px;
+}
+.step-btn:hover{border-color:var(--gold);box-shadow:0 0 18px rgba(242,179,61,.18)}
+.step-btn:active{transform:scale(.88);background:var(--gold-soft)}
+.step-btn:disabled{opacity:.3;pointer-events:none}
+.step-val{font-family:var(--disp);font-size:1.75rem;min-width:2.2ch;text-align:center}
+
+.names-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px 2px;font-size:.9rem;font-weight:700;color:var(--muted);transition:.2s}
+.names-toggle:hover{color:var(--ink)}
+.chev{transition:transform .3s;color:var(--gold);display:grid;place-items:center}
+.chev svg{width:18px;height:18px}
+.names-wrap.open .chev{transform:rotate(180deg)}
+.names-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin-top:12px}
+.names-wrap.open .names-grid{display:grid;animation:screenIn .35s both}
+.name-in{background:var(--bg0);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:.7rem .8rem;font-size:.85rem;transition:.2s;width:100%}
+.name-in::placeholder{color:var(--faint)}
+.name-in:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  min-height:60px;padding:1rem 1.4rem;border-radius:16px;font-size:1.12rem;font-weight:900;
+  transition:transform .15s, box-shadow .2s, background .2s, border-color .2s;position:relative;
+}
+.btn svg{width:21px;height:21px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn svg.f{fill:currentColor;stroke:none}
+.btn:active{transform:scale(.965)}
+.btn-gold{background:linear-gradient(180deg,#ffd166,var(--gold));color:#221605;box-shadow:0 10px 30px rgba(242,179,61,.28), inset 0 1px 0 rgba(255,255,255,.5)}
+.btn-gold:hover{box-shadow:0 14px 38px rgba(242,179,61,.4), inset 0 1px 0 rgba(255,255,255,.5);transform:translateY(-2px)}
+.btn-gold:active{transform:translateY(0) scale(.965)}
+.btn-danger{border:1.5px solid rgba(239,83,80,.55);color:var(--red);background:rgba(239,83,80,.06)}
+.btn-danger:hover{background:var(--red-soft);box-shadow:0 8px 26px rgba(239,83,80,.2)}
+.btn-ghost{border:1.5px solid var(--line);color:var(--muted)}
+.btn-ghost:hover{color:var(--ink);border-color:var(--faint)}
+
+.rules{background:var(--panel);border:1px solid var(--line-soft);margin-top:4px}
+.rules summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:15px 18px;font-weight:900;font-size:.95rem;color:var(--muted);transition:.2s}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary:hover{color:var(--gold)}
+.rules summary::before{content:"؟";font-family:var(--disp);color:var(--gold);font-size:1.2rem;line-height:1}
+.rules[open] summary{color:var(--gold)}
+.rules-body{padding:0 20px 18px}
+.rules ol{list-style:none;counter-reset:r;display:flex;flex-direction:column;gap:11px}
+.rules li{counter-increment:r;position:relative;padding-right:36px;color:var(--muted);font-size:.87rem;line-height:1.8;font-weight:300}
+.rules li::before{
+  content:counter(r, persian);font-family:var(--disp);color:var(--teal);
+  position:absolute;right:0;top:1px;width:24px;height:24px;border:1px solid rgba(56,217,169,.35);
+  border-radius:7px;display:grid;place-items:center;font-size:.95rem;background:var(--teal-soft);
+}
+
+/* ---------- دست‌به‌دست ---------- */
+.kicker{font-size:.74rem;font-weight:900;letter-spacing:.14em;color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.kicker::before{content:"";width:22px;height:2px;background:var(--teal)}
+h2.screen-title{font-family:var(--disp);font-weight:400;font-size:clamp(1.7rem,7.5vw,2.3rem);line-height:1.25;margin-bottom:6px}
+.ho-center{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 0 8px}
+.ring-num{position:relative;width:min(230px,62vw);aspect-ratio:1;display:grid;place-items:center;margin:14px 0 8px}
+.ring-num::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(242,179,61,.45);animation:spin 24s linear infinite}
+.ring-num::after{content:"";position:absolute;inset:16px;border-radius:50%;border:1px solid var(--line);background:radial-gradient(circle at 50% 32%, var(--panel2), var(--bg0));box-shadow:inset 0 0 30px rgba(0,0,0,.5), 0 0 44px rgba(242,179,61,.1)}
+.ring-num .num{position:relative;z-index:1;font-family:var(--disp);font-size:clamp(4.6rem,22vw,6.4rem);color:var(--gold);line-height:1;text-shadow:0 0 30px rgba(242,179,61,.35)}
+.ho-name{font-family:var(--disp);font-size:1.5rem;margin-bottom:20px}
+.ho-hint{color:var(--faint);font-size:.8rem;margin-top:14px;font-weight:300}
+.dots{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:4px 0 22px;max-width:320px}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line);transition:.3s}
+.dots i.done{background:var(--teal)}
+.dots i.now{background:var(--gold);box-shadow:0 0 12px rgba(242,179,61,.6);transform:scale(1.25)}
+
+/* ---------- کارت ---------- */
+.card3d{perspective:1300px;width:min(330px,86vw);height:min(430px,58vh);margin:16px auto 24px;position:relative}
+.card-inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.25,.8,.3,1.05)}
+.card-inner.flipped{transform:rotateY(180deg)}
+.card-face{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:26px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.card-front{
+  border:1px solid #6b5636;
+  background:
+    linear-gradient(rgba(26,18,9,.62), rgba(18,13,7,.74)),
+    url("https://images.pexels.com/photos/7232498/pexels-photo-7232498.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200");
+  background-size:cover;background-position:center;
+}
+.card-front::before{content:"";position:absolute;inset:12px;border:1.5px dashed rgba(242,179,61,.4);pointer-events:none}
+.card-front .q{font-family:var(--disp);font-size:7.5rem;color:var(--gold);line-height:1;text-shadow:0 0 36px rgba(242,179,61,.35);animation:qpulse 2.6s ease-in-out infinite}
+@keyframes qpulse{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.06);opacity:1}}
+.card-front .mini{color:rgba(242,225,190,.75);font-size:.8rem;margin-top:10px;letter-spacing:.1em}
+.card-back{transform:rotateY(180deg);background:linear-gradient(175deg, var(--panel2), var(--panel) 55%, var(--bg1));border:1px solid var(--line)}
+.card-back.is-spy{border-color:rgba(239,83,80,.55);background:linear-gradient(175deg, #2a1512, #170d0c 55%, var(--bg0))}
+.rv-head{font-size:.74rem;font-weight:900;letter-spacing:.16em;color:var(--gold);margin-bottom:14px}
+.is-spy .rv-head{color:var(--red)}
+.rv-word{font-family:var(--disp);font-weight:400;font-size:clamp(2.1rem,10vw,2.9rem);line-height:1.3}
+.rv-eye{width:74px;height:48px;color:var(--red);margin-bottom:10px;animation:eyeslide 3s ease-in-out infinite}
+@keyframes eyeslide{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
+.rv-title{font-family:var(--disp);font-weight:400;font-size:clamp(2rem,9vw,2.6rem);color:var(--red);line-height:1.2;text-shadow:0 0 30px rgba(239,83,80,.35)}
+.rv-note{color:var(--muted);font-size:.85rem;line-height:1.9;margin-top:14px;max-width:250px;font-weight:300}
+.stamp{
+  position:absolute;top:22px;left:-14px;font-family:var(--disp);font-size:1.05rem;color:var(--red);
+  border:2.5px solid var(--red);border-radius:8px;padding:.1rem .8rem;transform:rotate(-12deg);
+  letter-spacing:.08em;background:rgba(239,83,80,.08);animation:stampIn .5s cubic-bezier(.2,1.5,.4,1) both;
+}
+.stamp.gold{color:var(--gold);border-color:var(--gold);background:rgba(242,179,61,.08)}
+@keyframes stampIn{from{transform:scale(2.4) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(-12deg);opacity:1}}
+
+/* ---------- تایمر ---------- */
+.clock{position:relative;width:min(290px,76vw);margin:18px auto 8px}
+.clock svg.ring{width:100%;display:block;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--line-soft);stroke-width:10}
+.ring-fg{fill:none;stroke:var(--teal);stroke-width:10;stroke-linecap:round;stroke-dasharray:691.15;transition:stroke-dashoffset .25s linear, stroke .5s;filter:drop-shadow(0 0 10px rgba(56,217,169,.35))}
+.clock.warn .ring-fg{stroke:var(--gold);filter:drop-shadow(0 0 10px rgba(242,179,61,.4))}
+.clock.crit .ring-fg{stroke:var(--red);filter:drop-shadow(0 0 14px rgba(239,83,80,.55))}
+.digits{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.digits strong{font-family:var(--disp);font-weight:400;font-size:clamp(3.1rem,17vw,4.4rem);line-height:1;letter-spacing:.02em;transition:color .5s}
+.clock.warn .digits strong{color:var(--gold)}
+.clock.crit .digits strong{color:var(--red);animation:critpulse .9s ease-in-out infinite}
+@keyframes critpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.digits small{color:var(--faint);font-size:.72rem;font-weight:700;letter-spacing:.1em}
+.chip-row{display:flex;justify-content:center;gap:8px;margin:6px 0 4px;flex-wrap:wrap}
+.chip{font-size:.72rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.32rem .8rem;background:rgba(15,33,27,.5)}
+.hint-line{text-align:center;color:var(--muted);font-size:.9rem;line-height:1.9;font-weight:300;margin:12px auto 22px;max-width:340px}
+.btn-row{display:flex;gap:12px}
+.btn-row .btn{flex:1;min-height:58px;font-size:1.02rem}
+.btn.is-paused{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);animation:blinkdot 1.4s ease-in-out infinite}
+
+/* ---------- پایان ---------- */
+.word-reveal{
+  position:relative;text-align:center;padding:30px 20px 26px;margin:18px 0 14px;overflow:hidden;
+  background:linear-gradient(175deg, var(--panel2), var(--panel));border:1px solid rgba(242,179,61,.4);
+}
+.word-reveal::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 80% at 50% 0%, var(--gold-soft), transparent 70%);pointer-events:none}
+.word-reveal .lbl{font-size:.74rem;font-weight:900;letter-spacing:.16em;color:var(--gold);display:block;margin-bottom:8px}
+.end-word{font-family:var(--disp);font-weight:400;font-size:clamp(2.4rem,12vw,3.4rem);line-height:1.25;display:inline-block;animation:wordpop .6s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes wordpop{from{transform:scale(.5) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
+.winner-box{padding:18px;margin-bottom:14px}
+.winner-box p.q{font-weight:900;font-size:.95rem;margin-bottom:12px}
+.win-btn{border:1.5px solid var(--line);color:var(--muted);border-radius:14px}
+.win-btn:hover{border-color:var(--faint);color:var(--ink)}
+.win-btn.picked-cit{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);box-shadow:0 0 22px rgba(56,217,169,.15)}
+.win-btn.picked-spy{border-color:var(--red);color:var(--red);background:var(--red-soft);box-shadow:0 0 22px rgba(239,83,80,.15)}
+.win-banner{margin-top:14px;font-size:.85rem;font-weight:700;padding:.8rem 1rem;border-radius:12px;animation:screenIn .4s both}
+.win-banner.cit{color:var(--teal);background:var(--teal-soft);border:1px solid rgba(56,217,169,.3)}
+.win-banner.spy{color:var(--red);background:var(--red-soft);border:1px solid rgba(239,83,80,.3)}
+.spy-box{
+  position:relative;text-align:center;padding:30px 20px 26px;margin:16px 0;overflow:hidden;
+  background:linear-gradient(175deg, #2a1512, #150d0c);border:1px solid rgba(239,83,80,.5);animation:screenIn .5s both;
+}
+.spy-box::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 80% at 50% 0%, var(--red-soft), transparent 70%);pointer-events:none}
+.spy-box .lbl{font-size:.74rem;font-weight:900;letter-spacing:.16em;color:var(--red);display:block;margin-bottom:10px}
+.spy-names{font-family:var(--disp);font-weight:400;font-size:clamp(1.9rem,9vw,2.6rem);line-height:1.35;display:inline-block;animation:wordpop .55s cubic-bezier(.2,1.4,.4,1) .15s both}
+.spy-sub{color:var(--muted);font-size:.8rem;margin-top:10px;font-weight:300}
+.end-actions{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.15s !important}
+}
+@media (min-width:640px){
+  .app{padding-top:26px}
+  .radar{width:116px;height:116px}
+  .evidence .ph{height:190px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="noise" aria-hidden="true"></div>
+<div class="scan" aria-hidden="true"></div>
+<div class="floaters" aria-hidden="true"><span>؟</span><span>؟</span><span>؟</span><span>؟</span></div>
+
+<div class="app">
+
+  <header class="topbar" id="topbar" hidden>
+    <div class="brand">
+      <svg viewBox="0 0 64 40" fill="none" aria-hidden="true"><path d="M2 20C12 6 52 6 62 20C52 34 12 34 2 20Z" stroke="currentColor" stroke-width="4"/><circle cx="32" cy="20" r="8" fill="currentColor"/></svg>
+      جاسوس
+    </div>
+    <span class="phase-pill" id="phaseLabel">پخش کارت‌ها</span>
+    <button class="icon-btn" id="muteBtn" aria-label="صدا">
+      <svg id="sndOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <svg id="sndOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="16" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="16" y2="15"/></svg>
+    </button>
+    <button class="abort-btn" id="abortBtn">انصراف</button>
+  </header>
+
+  <!-- ===== شروع ===== -->
+  <section class="screen active" id="screen-setup">
+    <div class="brief-head">
+      <div class="radar" aria-hidden="true"><div class="sweep"></div><div class="blip"></div></div>
+      <div>
+        <span class="stamp-tag">محرمانه</span>
+        <h1 class="logo">جا<em>سوس</em></h1>
+        <p class="tag">یه مکان مخفی بین شماست — ولی کی ازش بی‌خبره؟</p>
+      </div>
+    </div>
+
+    <figure class="evidence">
+      <i class="tape t1"></i><i class="tape t2"></i>
+      <div class="ph">
+        <img src="https://images.pexels.com/photos/30255045/pexels-photo-30255045.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200" alt="سوژهٔ تحت تعقیب پشت کرکره‌ها" decoding="async">
+      </div>
+      <figcaption>
+        <svg viewBox="0 0 64 40" fill="none"><path d="M2 20C12 6 52 6 62 20C52 34 12 34 2 20Z" stroke="currentColor" stroke-width="4"/><circle cx="32" cy="20" r="8" fill="currentColor"/></svg>
+        پروندهٔ شمارهٔ ۰۷ — سوژه هنوز بین ماست
+      </figcaption>
+    </figure>
+
+    <div class="panel cut">
+      <h2 class="panel-title">بریفینگ عملیات</h2>
+
+      <div class="setting">
+        <div><span class="setting-label">تعداد بازیکن‌ها</span><span class="setting-sub">۳ تا ۱۲ نفر</span></div>
+        <div class="stepper">
+          <button class="step-btn" data-key="players" data-step="-1" aria-label="کم کردن بازیکن‌ها">−</button>
+          <span class="step-val" id="val-players">۵</span>
+          <button class="step-btn" data-key="players" data-step="1" aria-label="زیاد کردن بازیکن‌ها">+</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div><span class="setting-label">تعداد جاسوس‌ها</span><span class="setting-sub" id="spiesSub">کاملاً تصادفی، با پخش عادلانه در دورها</span></div>
+        <div class="stepper">
+          <button class="step-btn" data-key="spies" data-step="-1" aria-label="کم کردن جاسوس‌ها">−</button>
+          <span class="step-val" id="val-spies">۱</span>
+          <button class="step-btn" data-key="spies" data-step="1" aria-label="زیاد کردن جاسوس‌ها">+</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div><span class="setting-label">زمان بازجویی</span><span class="setting-sub">۳ تا ۱۰ دقیقه</span></div>
+        <div class="stepper">
+          <button class="step-btn" data-key="minutes" data-step="-1" aria-label="کم کردن زمان">−</button>
+          <span class="step-val" id="val-minutes">۵</span>
+          <button class="step-btn" data-key="minutes" data-step="1" aria-label="زیاد کردن زمان">+</button>
+        </div>
+      </div>
+
+      <div class="names-wrap" id="namesWrap">
+        <button class="names-toggle" id="namesToggle">
+          <span>اسم بازیکن‌ها (اختیاری)</span>
+          <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"/></svg></span>
+        </button>
+        <div class="names-grid" id="namesGrid"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" id="startBtn">
+      شروع عملیات
+      <svg viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+    </button>
+
+    <details class="rules cut">
+      <summary>راهنمای بازی</summary>
+      <div class="rules-body">
+        <ol>
+          <li>گوشی دست‌به‌دست می‌چرخه و هر کس یواشکی کارت خودش رو می‌بینه؛ یه مکان مخفی به همه نشون داده می‌شه، جز جاسوس‌ها.</li>
+          <li>وقتی همه کارت‌هاشون رو دیدن، تایمر شروع می‌شه. نوبتی از هم سؤال بپرسید تا جاسوس رو پیدا کنید.</li>
+          <li>جاسوس سعی می‌کنه با جواب‌های زیرکانه لو نره و اگه تونست، مکان رو حدس بزنه.</li>
+          <li>قبل از تموم‌شدن تایمر با رأی‌گیری جاسوس رو گیر بندازید؛ بعد از افشا، برد و باخت رو اعلام کنید.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== دست‌به‌دست ===== -->
+  <section class="screen" id="screen-handoff">
+    <p class="kicker" id="hoKicker">نوبت ۱ از ۵</p>
+    <h2 class="screen-title">گوشی رو بده به:</h2>
+    <div class="ho-center">
+      <div class="ring-num"><div class="num" id="hoNum">۱</div></div>
+      <div class="ho-name" id="hoName">بازیکن ۱</div>
+      <div class="dots" id="hoDots"></div>
+      <button class="btn btn-gold" id="showCardBtn" style="max-width:340px">
+        <svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="10.5" r="2"/><path d="M14 9h5M14 13h3.5M6 15.5c.7-1.5 4.3-1.5 5 0"/></svg>
+        نمایش کارت من
+      </button>
+      <p class="ho-hint">بقیه نگاه نکنن؛ کارت فقط برای همین بازیکنه</p>
+    </div>
+  </section>
+
+  <!-- ===== نمایش کارت ===== -->
+  <section class="screen" id="screen-reveal">
+    <p class="kicker" id="rvKicker">کارت بازیکن ۱</p>
+    <div class="card3d">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face card-front cut">
+          <div class="q">؟</div>
+          <div class="mini">پاکت محرمانه</div>
+        </div>
+        <div class="card-face card-back cut" id="cardBack"></div>
+      </div>
+    </div>
+    <button class="btn btn-gold" id="seenBtn" style="max-width:340px;margin:0 auto" hidden>
+      <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+      <span id="seenText">دیدم، برو بعدی</span>
+    </button>
+  </section>
+
+  <!-- ===== تایمر ===== -->
+  <section class="screen" id="screen-timer">
+    <p class="kicker">بازجویی</p>
+    <h2 class="screen-title">سؤال بپرسید، جواب بدید</h2>
+    <div class="chip-row" id="timerMeta"></div>
+    <div class="clock" id="clock">
+      <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+        <circle class="ring-bg" cx="120" cy="120" r="110"/>
+        <circle class="ring-fg" id="ringFg" cx="120" cy="120" r="110" stroke-dashoffset="0"/>
+      </svg>
+      <div class="digits"><strong id="digits">۰۵:۰۰</strong><small id="clockState">در حال اجرا</small></div>
+    </div>
+    <p class="hint-line">نوبتی از هم سؤال بپرسید؛ جواب‌های جاسوس لوَش می‌ده.</p>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="pauseBtn"></button>
+      <button class="btn btn-danger" id="endBtn">
+        <svg viewBox="0 0 24 24"><path d="M5 21V4m0 1h13l-2.8 3.5L18 12H5"/></svg>
+        پایان عملیات
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== پایان ===== -->
+  <section class="screen" id="screen-end">
+    <p class="kicker">پایان عملیات</p>
+    <h2 class="screen-title" id="endTitle">وقت بازجویی تموم شد</h2>
+    <div class="chip-row" id="endMeta"></div>
+
+    <div class="word-reveal cut">
+      <span class="lbl">مکان مخفی فاش شد</span>
+      <span class="end-word" id="endWord">—</span>
+      <div class="stamp gold" style="top:14px;left:-10px">فاش شد</div>
+    </div>
+
+    <div class="panel winner-box cut">
+      <p class="q">کی برنده شد؟</p>
+      <div class="btn-row">
+        <button class="btn win-btn" id="winCit">
+          <svg viewBox="0 0 24 24"><path d="M12 22s7.5-3.6 7.5-9.5V5.2L12 2.5 4.5 5.2v7.3C4.5 18.4 12 22 12 22Z"/></svg>
+          شهروندها
+        </button>
+        <button class="btn win-btn" id="winSpy">
+          <svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>
+          جاسوس‌ها
+        </button>
+      </div>
+      <p class="win-banner" id="winBanner" hidden></p>
+    </div>
+
+    <button class="btn btn-danger" id="revealSpyBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>
+      نمایش جاسوس
+    </button>
+
+    <div class="spy-box cut" id="spyBox" hidden>
+      <span class="lbl" id="spyLbl">جاسوس عملیات</span>
+      <span class="spy-names" id="spyNames">—</span>
+      <p class="spy-sub" id="spySub"></p>
+      <div class="stamp" style="top:14px;left:-10px">گیر افتاد</div>
+    </div>
+
+    <div class="end-actions">
+      <button class="btn btn-gold" id="againBtn">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/></svg>
+        دور جدید
+      </button>
+      <button class="btn btn-ghost" id="setupBtn">
+        <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
+        تغییر تنظیمات
+      </button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   لیست مکان‌ها — برای گسترش، کلمه‌های جدید رو همین‌جا اضافه کنید
+   ============================================================ */
+const WORDS = [
+  "بیمارستان","هواپیما","رستوران","مدرسه","استخر","سینما","کتابخانه","مترو","بانک","آرایشگاه",
+  "داروخانه","پمپ بنزین","فرودگاه","ایستگاه قطار","هتل","ساحل","کوهستان","جنگل","بازار","موزه",
+  "باغ‌وحش","سیرک","شهربازی","زمین فوتبال","باشگاه بدنسازی","ایستگاه آتش‌نشانی","کلانتری","دادگاه","سفارت","زیردریایی",
+  "کشتی تفریحی","ایستگاه فضایی","آزمایشگاه","کارخانه","معدن","مزرعه","نانوایی","قنادی","کافه","فست‌فود",
+  "پارک","مسجد","کلیسا","خیمه‌شب‌بازی","مراسم عروسی","کنسرت","جشن تولد","کمپینگ","ماهیگیری","پیست اسکی",
+  "سونا","دندان‌پزشکی","چشم‌پزشکی","انتخابات","تظاهرات","آسایشگاه سالمندان","مهدکودک","دانشگاه","پادگان","زندان",
+  "جزیرهٔ متروک","فانوس دریایی","پل معلق","ساختمان نیمه‌کاره","متل بین‌راهی","قطار شب","تاکسی","آژانس مسافرتی","آتلیهٔ عکاسی","خیاطی",
+  "تعمیرگاه ماشین","خشک‌شویی","بوستان آبی","زمین تنیس","سالن بولینگ","پیست کارتینگ","مزرعهٔ اسب","گل‌خانه","سوپرمارکت","چایخانه",
+  "کافی‌نت","کارواش","بازار ماهی‌فروشان","تکیه","زورخانه","قلعهٔ تاریخی","عمارت قدیمی","غار","آبشار","چشمهٔ آب گرم",
+  "کویر","دریاچه","سد","بندر","اسکله","گمرک","انبار کالا","آسیاب بادی","دکل نفتی","پالایشگاه",
+  "نیروگاه","دیتاسنتر","استودیو ضبط","لوکیشن فیلم‌برداری","تئاتر","گالری هنری","نمایشگاه کتاب","نمایشگاه ماشین","حراجی","پاساژ",
+  "مرکز خرید","عطاری","طلافروشی","صرافی","بنگاه املاک","دفتر بیمه","دفترخانه","ادارهٔ پست","ایستگاه رادیو","استودیو تلویزیون",
+  "چاپخانه","خیابان شلوغ","پارکینگ طبقاتی","ترمینال اتوبوس","کشتی باری","قایق ماهی‌گیری","کلبهٔ چوبی","چادر عشایری","بازارچهٔ محلی","کارگاه سفالگری",
+  "کارگاه نجاری","آشپزخانهٔ رستوران","سلف دانشگاه","خوابگاه دانشجویی","اردوگاه تابستانی","پیست دوچرخه‌سواری","زمین بسکتبال","باشگاه شطرنج","خانهٔ قدیمی","زیرزمین تاریک",
+  "تله‌کابین","ترن هوایی","چرخ‌وفلک","گل‌فروشی","پت‌شاپ","کلینیک دامپزشکی","باغ گیاه‌شناسی","رصدخانه","آکواریوم","آسمان‌نما",
+  "کاروانسرا","حمام سنتی","سفره‌خانه","رستوران بین‌راهی","دکهٔ روزنامه‌فروشی","ایستگاه اتوبوس","گاراژ","سیلوی گندم","مرغداری","گاوداری",
+  "کندوی عسل","باغ انگور","مزرعهٔ آفتابگردان","شالیزار","نخلستان","باغ چای","مزرعهٔ پنبه","آتشفشان","یخچال طبیعی","جنگل مه‌آلود",
+  "بازار ادویه","بیمارستان صحرایی","چادر امداد","ایستگاه هواشناسی","برج مراقبت","آشیانهٔ هواپیما","سالن انتظار فرودگاه","زمین گلف","پیست اسب‌دوانی","خانهٔ درختی",
+  "سردابه","مغازهٔ عتیقه‌فروشی","کتاب‌فروشی دست‌دوم","حیاط مدرسه","بام ساختمان","آسانسور","پلهٔ برقی","واگن مترو","کابین خلبان","اتاق فرمان"
+];
+
+const EYE_SVG = '<svg class="rv-eye" viewBox="0 0 64 40" fill="none"><path d="M2 20C12 6 52 6 62 20C52 34 12 34 2 20Z" stroke="currentColor" stroke-width="3.5"/><circle cx="32" cy="20" r="8.5" fill="currentColor"/><circle cx="35" cy="17" r="2.6" fill="#0a1512"/></svg>';
+const IC = {
+  pause:'<svg class="f" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>',
+  play:'<svg class="f" viewBox="0 0 24 24"><path d="M8 5.2v13.6L19 12z"/></svg>'
+};
+
+/* ---------- ابزارها ---------- */
+const $ = id => document.getElementById(id);
+const FA = '۰۱۲۳۴۵۶۷۸۹';
+const fa = n => String(n).replace(/\d/g, d => FA[d]);
+const pad2 = n => String(n).padStart(2, '0');
+const faTime = s => fa(pad2(Math.floor(s/60))) + ':' + fa(pad2(s%60));
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* ---------- تصادف امن (crypto) ---------- */
+function randInt(max){
+  if(max <= 1) return 0;
+  const buf = new Uint32Array(1);
+  const limit = 4294967296 - (4294967296 % max);
+  do { crypto.getRandomValues(buf); } while(buf[0] >= limit);
+  return buf[0] % max;
+}
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = randInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ---------- state ---------- */
+const state = {
+  players:5, spies:1, minutes:5,
+  draftNames:[], names:[],
+  spyIdx:[], spyCounts:null, word:'', wordHistory:[],
+  current:0, round:0, muted:false,
+  timer:{ total:0, left:0, running:false, endAt:0, iv:null, lastTick:-1 }
+};
+
+/* ---------- صدا ---------- */
+let audioCtx = null;
+document.addEventListener('pointerdown', () => { try{ ac(); }catch(e){} }, { once:true });
+function ac(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq=880, dur=.12, delay=0, type='sine', vol=.15){
+  if(state.muted) return;
+  try{
+    const c = ac(), o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, c.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + delay + dur);
+    o.connect(g).connect(c.destination);
+    o.start(c.currentTime + delay); o.stop(c.currentTime + delay + dur);
+  }catch(e){}
+}
+const alarm = () => { beep(780,.15,0,'square',.1); beep(520,.15,.2,'square',.1); beep(780,.45,.4,'square',.1); };
+
+/* ---------- ناوبری ---------- */
+const screens = ['setup','handoff','reveal','timer','end'];
+const phaseNames = { setup:'', handoff:'پخش کارت‌ها', reveal:'پخش کارت‌ها', timer:'بازجویی', end:'نتیجهٔ عملیات' };
+let pendingT = null, seenT = null;
+function go(name){
+  clearTimeout(pendingT); clearTimeout(seenT);
+  screens.forEach(s => $('screen-'+s).classList.toggle('active', s === name));
+  $('topbar').hidden = name === 'setup';
+  $('phaseLabel').textContent = phaseNames[name];
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ---------- استپرها ---------- */
+const limits = { players:{min:3,max:12}, spies:{min:1,max:2}, minutes:{min:3,max:10} };
+const maxSpies = () => Math.max(1, Math.floor((state.players - 1) / 2));
+function renderSteppers(){
+  $('val-players').textContent = fa(state.players);
+  $('val-spies').textContent = fa(state.spies);
+  $('val-minutes').textContent = fa(state.minutes);
+  document.querySelectorAll('.step-btn').forEach(b => {
+    const k = b.dataset.key;
+    const max = k === 'spies' ? maxSpies() : limits[k].max;
+    const v = state[k];
+    b.disabled = (b.dataset.step === '-1' && v <= limits[k].min) || (b.dataset.step === '1' && v >= max);
+  });
+}
+document.querySelectorAll('.step-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const k = btn.dataset.key, d = +btn.dataset.step;
+    const max = k === 'spies' ? maxSpies() : limits[k].max;
+    state[k] = Math.min(max, Math.max(limits[k].min, state[k] + d));
+    if(k === 'players'){
+      state.spies = Math.min(state.spies, maxSpies());
+      state.spyCounts = null;
+      rebuildNames();
+    }
+    renderSteppers();
+    beep(k === 'players' ? 700 : 900, .05, 0, 'sine', .06);
+  });
+});
+
+/* ---------- اسم‌ها ---------- */
+function rebuildNames(){
+  const old = state.draftNames.slice(0, state.players);
+  state.draftNames = Array.from({ length: state.players }, (_, i) => old[i] ?? '');
+  const grid = $('namesGrid');
+  grid.innerHTML = '';
+  state.draftNames.forEach((v, i) => {
+    const inp = document.createElement('input');
+    inp.className = 'name-in';
+    inp.value = v;
+    inp.maxLength = 16;
+    inp.placeholder = 'بازیکن ' + fa(i+1);
+    inp.addEventListener('input', () => { state.draftNames[i] = inp.value; });
+    grid.appendChild(inp);
+  });
+}
+$('namesToggle').addEventListener('click', () => $('namesWrap').classList.toggle('open'));
+const getName = i => (state.names[i] || '').trim() || 'بازیکن ' + fa(i+1);
+
+/* ---------- انتخاب کلمه و جاسوس ---------- */
+function dealWord(){
+  let pool = [];
+  for(let i = 0; i < WORDS.length; i++) if(!state.wordHistory.includes(i)) pool.push(i);
+  if(!pool.length){ state.wordHistory = []; pool = WORDS.map((_, i) => i); }
+  const idx = pool[randInt(pool.length)];
+  state.wordHistory.push(idx);
+  if(state.wordHistory.length > Math.min(12, WORDS.length - 1)) state.wordHistory.shift();
+  state.word = WORDS[idx];
+}
+/* انتخاب وزنی: در هر دور کاملاً تصادفی، ولی بازیکنی که تازه جاسوس بوده وزن کمتری می‌گیره تا نقش‌ها بین همه پخش بشه */
+function assignSpies(){
+  if(!state.spyCounts || state.spyCounts.length !== state.players) state.spyCounts = new Array(state.players).fill(0);
+  const pool = shuffle(Array.from({ length: state.players }, (_, i) => i));
+  const chosen = [];
+  for(let k = 0; k < state.spies; k++){
+    const weights = pool.map(i => 1 / (1 + state.spyCounts[i]));
+    const total = weights.reduce((a, b) => a + b, 0);
+    const r = (randInt(1000000) / 1000000) * total;
+    let acc = 0, pick = pool.length - 1;
+    for(let j = 0; j < pool.length; j++){ acc += weights[j]; if(r < acc){ pick = j; break; } }
+    chosen.push(pool[pick]);
+    pool.splice(pick, 1);
+  }
+  state.spyIdx = chosen.sort((a, b) => a - b);
+  state.spyIdx.forEach(i => state.spyCounts[i]++);
+}
+
+/* ---------- شروع ---------- */
+$('startBtn').addEventListener('click', () => {
+  state.names = state.draftNames.slice();
+  state.round = 1;
+  dealWord();
+  assignSpies();
+  state.current = 0;
+  beep(660,.1,0); beep(990,.16,.12);
+  renderHandoff();
+  go('handoff');
+});
+
+/* ---------- دست‌به‌دست ---------- */
+function renderHandoff(){
+  const i = state.current;
+  $('hoKicker').textContent = 'نوبت ' + fa(i+1) + ' از ' + fa(state.players);
+  $('hoNum').textContent = fa(i+1);
+  $('hoName').textContent = getName(i);
+  const dots = $('hoDots');
+  dots.innerHTML = '';
+  for(let d = 0; d < state.players; d++){
+    const el = document.createElement('i');
+    if(d < i) el.classList.add('done');
+    if(d === i) el.classList.add('now');
+    dots.appendChild(el);
+  }
+}
+$('showCardBtn').addEventListener('click', () => { beep(880,.08,0,'sine',.08); showReveal(); });
+
+/* ---------- نمایش کارت ---------- */
+function showReveal(){
+  const i = state.current;
+  const isSpy = state.spyIdx.includes(i);
+  $('rvKicker').textContent = 'کارت ' + getName(i) + ' — فقط خودش ببینه';
+  const back = $('cardBack');
+  back.classList.toggle('is-spy', isSpy);
+  back.innerHTML = isSpy
+    ? `<div class="rv-head">پروندهٔ جاسوس</div>
+       ${EYE_SVG}
+       <h3 class="rv-title">تو جاسوسی!</h3>
+       <p class="rv-note">نمی‌دونی مکان کجاست؛ با دقت به جواب بقیه گوش کن و مکان رو حدس بزن.</p>
+       <div class="stamp">جاسوس</div>`
+    : `<div class="rv-head">مکان مخفی</div>
+       <h3 class="rv-word">${esc(state.word)}</h3>
+       <p class="rv-note">این مکان رو فقط خودت می‌دونی؛ با جواب‌هات هم لو نده.</p>
+       <div class="stamp gold">محرمانه</div>`;
+  $('cardInner').classList.remove('flipped');
+  const seen = $('seenBtn');
+  seen.hidden = true;
+  $('seenText').textContent = (i === state.players - 1) ? 'شروع بازجویی' : 'دیدم، برو بعدی';
+  go('reveal');
+  pendingT = setTimeout(() => $('cardInner').classList.add('flipped'), 120);
+  seenT = setTimeout(() => { seen.hidden = false; }, 950);
+}
+$('seenBtn').addEventListener('click', () => {
+  beep(700,.07,0,'sine',.07);
+  if(state.current < state.players - 1){
+    state.current++;
+    renderHandoff();
+    go('handoff');
+  }else{
+    startTimer();
+  }
+});
+
+/* ---------- تایمر ---------- */
+const RING_C = 691.15;
+function renderClock(){
+  const t = state.timer;
+  $('digits').textContent = faTime(t.left);
+  $('ringFg').style.strokeDashoffset = RING_C * (1 - (t.total ? t.left / t.total : 0));
+  const clock = $('clock');
+  clock.classList.toggle('warn', t.left <= 60 && t.left > 15);
+  clock.classList.toggle('crit', t.left <= 15 && t.left > 0);
+}
+function tick(){
+  const t = state.timer;
+  t.left = Math.max(0, Math.ceil((t.endAt - Date.now()) / 1000));
+  renderClock();
+  if(t.left <= 3 && t.left > 0 && t.left !== t.lastTick){
+    t.lastTick = t.left;
+    beep(1050,.07,0,'sine',.1);
+  }
+  if(t.left <= 0){
+    stopTimer();
+    alarm();
+    goEnd('time');
+  }
+}
+function runTimer(){
+  const t = state.timer;
+  t.running = true;
+  t.endAt = Date.now() + t.left * 1000;
+  t.lastTick = -1;
+  clearInterval(t.iv);
+  t.iv = setInterval(tick, 200);
+  $('pauseBtn').innerHTML = IC.pause + '<span>توقف</span>';
+  $('pauseBtn').classList.remove('is-paused');
+  $('clockState').textContent = 'در حال اجرا';
+}
+function stopTimer(){
+  const t = state.timer;
+  t.running = false;
+  clearInterval(t.iv);
+}
+function startTimer(){
+  const t = state.timer;
+  t.total = state.minutes * 60;
+  t.left = t.total;
+  renderClock();
+  $('timerMeta').innerHTML =
+    `<span class="chip">دور ${fa(state.round)}</span>` +
+    `<span class="chip">${fa(state.players)} بازیکن</span>` +
+    `<span class="chip">${fa(state.spies)} جاسوس</span>` +
+    `<span class="chip">${fa(state.minutes)} دقیقه</span>`;
+  go('timer');
+  runTimer();
+}
+$('pauseBtn').addEventListener('click', () => {
+  const t = state.timer;
+  if(t.running){
+    stopTimer();
+    t.left = Math.max(0, Math.ceil((t.endAt - Date.now()) / 1000));
+    renderClock();
+    $('pauseBtn').innerHTML = IC.play + '<span>ادامه</span>';
+    $('pauseBtn').classList.add('is-paused');
+    $('clockState').textContent = 'متوقف شده';
+    beep(420,.09);
+  }else{
+    beep(880,.09);
+    runTimer();
+  }
+});
+$('endBtn').addEventListener('click', () => { stopTimer(); goEnd('early'); });
+
+/* ---------- پایان ---------- */
+function goEnd(reason){
+  $('endTitle').textContent = reason === 'early' ? 'عملیات دستی متوقف شد' : 'وقت بازجویی تموم شد';
+  const w = $('endWord');
+  w.style.animation = 'none'; void w.offsetWidth; w.style.animation = '';
+  w.textContent = state.word;
+  $('endMeta').innerHTML =
+    `<span class="chip">دور ${fa(state.round)}</span>` +
+    `<span class="chip">${fa(state.players)} بازیکن</span>` +
+    `<span class="chip">${fa(state.spies)} جاسوس</span>`;
+  $('spyBox').hidden = true;
+  $('revealSpyBtn').hidden = false;
+  $('winBanner').hidden = true;
+  ['winCit','winSpy'].forEach(id => $(id).classList.remove('picked-cit','picked-spy'));
+  go('end');
+}
+$('revealSpyBtn').addEventListener('click', () => {
+  beep(300,.14,0,'sawtooth',.08); beep(220,.2,.12,'sawtooth',.08);
+  const names = state.spyIdx.map(i => getName(i));
+  $('spyLbl').textContent = state.spyIdx.length > 1 ? 'جاسوس‌های عملیات' : 'جاسوس عملیات';
+  $('spyNames').textContent = names.join('، ');
+  $('spySub').textContent = state.spyIdx.length > 1
+    ? fa(state.spyIdx.length) + ' جاسوس بین ' + fa(state.players) + ' بازیکن قایم شده بود'
+    : 'تنها جاسوس بین ' + fa(state.players) + ' بازیکن';
+  $('revealSpyBtn').hidden = true;
+  $('spyBox').hidden = false;
+});
+function pickWinner(side){
+  const cit = side === 'cit';
+  $('winCit').classList.toggle('picked-cit', cit);
+  $('winSpy').classList.toggle('picked-spy', !cit);
+  const b = $('winBanner');
+  b.hidden = false;
+  b.className = 'win-banner ' + (cit ? 'cit' : 'spy');
+  b.textContent = cit
+    ? 'شهروندها جاسوس رو گیر انداختن — پیروزی با شهروندهاست!'
+    : 'جاسوس تا آخر ناشناخته موند — پیروزی با جاسوسه!';
+  beep(cit ? 990 : 330, .14, 0, 'sine', .1);
+}
+$('winCit').addEventListener('click', () => pickWinner('cit'));
+$('winSpy').addEventListener('click', () => pickWinner('spy'));
+
+$('againBtn').addEventListener('click', () => {
+  state.round++;
+  dealWord();
+  assignSpies();
+  state.current = 0;
+  beep(660,.1,0); beep(990,.16,.12);
+  renderHandoff();
+  go('handoff');
+});
+$('setupBtn').addEventListener('click', () => { stopTimer(); go('setup'); });
+$('abortBtn').addEventListener('click', () => { stopTimer(); go('setup'); });
+$('muteBtn').addEventListener('click', () => {
+  state.muted = !state.muted;
+  $('sndOn').hidden = state.muted;
+  $('sndOff').hidden = !state.muted;
+  if(!state.muted) beep(880,.08);
+});
+
+/* ---------- شروع ---------- */
+rebuildNames();
+renderSteppers();
+$('pauseBtn').innerHTML = IC.pause + '<span>توقف</span>';
+</script>
+</body>
+</html>
